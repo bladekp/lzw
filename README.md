@@ -1,5 +1,5 @@
 # Program demonstrujący zastosowanie algorytmu LZW do kompresji plików tekstowych
-Autorzy: Błądek Piotr bladekp@ee.pw.edu.pl, Decker Wojciech dekelek@gmail.com
+Autorzy: Błądek Piotr bladekp@ee.pw.edu.pl, Decker Wojciech deckerw@ee.pw.edu.pl
 
 ## Technologia
 Program zostanie napisany wjęzyku Java SE 8, bez użycia dodatkowych bibliotek. Będzie to aplikacja konsolowa.
