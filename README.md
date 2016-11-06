@@ -7,7 +7,7 @@ Program zostanie napisany wjęzyku Java SE 8, bez użycia dodatkowych bibliotek.
 ## Działanie programu
 Program będzie uruchamiany z konsoli w następujący sposób:
 
-`java - jar lzw.jar ŹRÓDŁO CEL OPCJA`
+`java -jar lzw.jar OPCJA [ŹRÓDŁO] [CEL]`
 
-Gdzie ŻRÓDŁO to plik wejściowy, CEL plik wyjściowy, a OPCJA to -k w przypadku kompresji pliku żródłowego do decelowego lub -d w przypadku dekompresji pliku żródłowego do decelowego. Wszystkie parametry są wymagane. Na koniec działania program wypisze ile miejsca udało się zaoszczędzić dzięki kompresji.
+Gdzie ŻRÓDŁO to plik wejściowy, CEL plik wyjściowy, a OPCJA to -k w przypadku kompresji pliku żródłowego do decelowego lub -d w przypadku dekompresji pliku żródłowego do decelowego. Wszystkie parametry są wymagane. Można też użyć programu z opcją -h w celu pokazania pomocy. Na koniec działania program wypisze ile miejsca udało się zaoszczędzić dzięki kompresji.
 
