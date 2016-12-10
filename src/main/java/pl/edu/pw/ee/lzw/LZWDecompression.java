@@ -7,7 +7,7 @@ public class LZWDecompression {
 
     // Define a HashMap and other variables that will be used in the program
     public HashMap<Integer, String> dictionary = new HashMap<>();
-    public String[] Array_char;
+    public String[] charArray;
     public int dictSize = 256;
     public int currword;
     public int priorword;
@@ -15,22 +15,19 @@ public class LZWDecompression {
     public boolean onleft = true;
 
     /**
-     * Decompress Method that takes in input, output as a file path Then
-     * decompress the input to same file as the one passed to compress method
-     * without loosing any information. In the decompression method it reads in
-     * 3 bytes of information and write 2 characters corresponding to the bits
-     * read.
-     *
+     * Decompress input file, write it content to output file.
+     * 
      * @param input - Name of input file path
+     * @param output - name of output file
      * @throws java.io.IOException - File input/output failure
      */
     public void decompress(String input, String output) throws IOException {
         // DictSize builds up to 4k, Array_Char holds these values
-        Array_char = new String[4096];
+        charArray = new String[4096];
 
         for (int i = 0; i < 256; i++) {
             dictionary.put(i, Character.toString((char) i));
-            Array_char[i] = Character.toString((char) i);
+            charArray[i] = Character.toString((char) i);
         }
 
         // Read input as uncompressed file & Write out compressed file
@@ -43,7 +40,7 @@ public class LZWDecompression {
             buffer[1] = in.readByte();
             priorword = getvalue(buffer[0], buffer[1], onleft);
             onleft = !onleft;
-            out.writeBytes(Array_char[priorword]);
+            out.writeBytes(charArray[priorword]);
 
             // Reads every 3 bytes and generates corresponding characters
             while (true) {
@@ -59,19 +56,19 @@ public class LZWDecompression {
 
                 if (currword >= dictSize) {
                     if (dictSize < 4096) {
-                        Array_char[dictSize] = Array_char[priorword]
-                                + Array_char[priorword].charAt(0);
+                        charArray[dictSize] = charArray[priorword]
+                                + charArray[priorword].charAt(0);
                     }
                     dictSize++;
-                    out.writeBytes(Array_char[priorword]
-                            + Array_char[priorword].charAt(0));
+                    out.writeBytes(charArray[priorword]
+                            + charArray[priorword].charAt(0));
                 } else {
                     if (dictSize < 4096) {
-                        Array_char[dictSize] = Array_char[priorword]
-                                + Array_char[currword].charAt(0);
+                        charArray[dictSize] = charArray[priorword]
+                                + charArray[currword].charAt(0);
                     }
                     dictSize++;
-                    out.writeBytes(Array_char[currword]);
+                    out.writeBytes(charArray[currword]);
                 }
                 priorword = currword;
             }
@@ -93,34 +90,26 @@ public class LZWDecompression {
         String temp1 = Integer.toBinaryString(b1);
         String temp2 = Integer.toBinaryString(b2);
 
-        while (temp1.length() < 8) {
-            temp1 = "0" + temp1;
-        }
-        if (temp1.length() == 32) {
-            temp1 = temp1.substring(24, 32);
-        }
-        while (temp2.length() < 8) {
-            temp2 = "0" + temp2;
-        }
-        if (temp2.length() == 32) {
-            temp2 = temp2.substring(24, 32);
-        }
+        while (temp1.length() < 8) temp1 = "0" + temp1;
+        
+        if (temp1.length() == 32) temp1 = temp1.substring(24, 32);
+        
+        while (temp2.length() < 8) temp2 = "0" + temp2;
+        
+        if (temp2.length() == 32) temp2 = temp2.substring(24, 32);
+        
 
-        if (onleft) {
-            return Integer.parseInt(temp1 + temp2.substring(0, 4), 2);
-        } else {
-            return Integer.parseInt(temp1.substring(4, 8) + temp2, 2);
-        }
+        return onleft ? 
+                Integer.parseInt(temp1 + temp2.substring(0, 4), 2) :
+                Integer.parseInt(temp1.substring(4, 8) + temp2, 2);
+
     }
 
     /**
-     * After creating a lzw object scans user input for file to compress, and
-     * prints out contents of file being compressed along with integer values of
-     * the characters being compressed, and will return your file name with an
-     * appended ".lzw"
+     * Creating a LZWDecompression object, starts decompressing.
      *
-     * @param args - The command line arguments
-     * @throws java.io.IOException - File input/output failure
+     * @param in - input file name
+     * @param out - output file name
      */
     public static void invoke(String in, String out){
         try {

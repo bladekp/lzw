@@ -14,18 +14,17 @@ public class LZWCompression {
     public boolean onleft = true;
 
     /**
-     * Takes in a file name that is uncompressed, and will compress it's file
-     * contents and append a ".lzw" to the end of the current file name
+     * It takes uncompressed file name, compress it content, and write it to
+     * file compressed.
      *
-     * @param uncompressed - Name of uncompressed file being compressed
+     * @param uncompressed - name of uncompressed file.
+     * @param compressed - name of compressed file
      * @throws java.io.IOException - File input/output failure
      */
     public void compress(String uncompressed, String compressed) throws IOException {
         // Dictionary size limit, builds dictionary
-        for (int i = 0; i < 256; i++) {
-            dictionary.put(Character.toString((char) i), i);
-        }
-
+        for (int i = 0; i < 256; i++) dictionary.put(Character.toString((char) i), i);
+        
         // Read input uncompress file & Write out compressed file
         RandomAccessFile read = new RandomAccessFile(uncompressed, "r");
         RandomAccessFile out = new RandomAccessFile(compressed, "rw");
@@ -45,10 +44,8 @@ public class LZWCompression {
                 inputByte = read.readByte();
                 i = new Byte(inputByte).intValue();
 
-                if (i < 0) {
-                    i += 256;
-                }
-               // System.out.print(i + ", ");
+                if (i < 0)  i += 256;
+                
                 ch = (char) i;
 
                 // If str + ch is in the dictionary..
@@ -71,7 +68,6 @@ public class LZWCompression {
                         buffer[2] = (byte) Integer.parseInt(
                                 s12.substring(4, 12), 2);
                         for (int b = 0; b < buffer.length; b++) {
-                            System.out.println(buffer[b]);
                             out.writeByte(buffer[b]);
                             buffer[b] = 0;
                         }
@@ -79,22 +75,14 @@ public class LZWCompression {
                     onleft = !onleft;
 
                     // Add str + ch to the dictionary
-                    if (dictSize < 4096) {
-                        dictionary.put(str + ch, dictSize++);
-                    }
-
+                    if (dictSize < 4096) dictionary.put(str + ch, dictionary.size());
+                    
                     // Set str to ch
                     str = "" + ch;
                 }
             }
-            /**
-             * Handles input/output file failure by converting 8bit to 12bit
-             * then storing integers to byte and writing to output file else add
-             * the buffers to [1] or use buffer[2] then using the length and a
-             * for loop to output the bytes and then zero out the buffer, note
-             * this code is similar to above code, which insures bits are stored
-             */
-        } catch (IOException e) {
+        // Handless End of File
+        } catch (EOFException e) {
             String str12bit = to12bit(dictionary.get(str));
             if (onleft) {
                 buffer[0] = (byte) Integer.parseInt(str12bit.substring(0, 8), 2);
@@ -131,13 +119,10 @@ public class LZWCompression {
     }
 
     /**
-     * After creating a lzw object scans user input for file to compress, and
-     * prints out contents of file being compressed along with integer values of
-     * the characters being compressed, and will return your file name with an
-     * appended ".lzw"
+     * Creating a LZWCompression object, starts compressing.
      *
-     * @param args - The command line arguments
-     * @throws java.io.IOException - File input/output failure
+     * @param in - input file name
+     * @param out - output file name
      */
     public static void invoke(String in, String out){
         try {
