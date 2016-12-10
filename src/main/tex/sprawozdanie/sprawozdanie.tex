@@ -1,0 +1,98 @@
+% sprawozdanie.tex
+
+% Piotr Błądek
+
+\documentclass{article}
+\usepackage{times}
+\usepackage{polski}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{listings}
+
+\begin{document}
+
+% Article top matter
+\title{Sprawozdanie - implementacja algorytmu LZW} 
+\author{
+        Wojciech Decker \texttt{deckerw@ee.pw.edu.pl} \\
+        Piotr Błądek \texttt{bladekp@ee.pw.edu.pl} \\
+        Politechnika Warszawska \\
+        Wydział Elektryczny \\
+        Kompresja Danych Projekt
+       }
+\date{\today} 
+\maketitle
+
+\section{Wstęp}
+
+Projekt zakładał napisanie implementacji algorytmu LZW do bezstratnej kompresji danych
+i przetestowanie go dla różnych danych, z porównaniem sprawnośi, czyli tego ile
+miejsca udało się przy pomocy LZW zaoszczędzić.
+
+\section{Struktura}
+
+Projekt napisany w języku JAVA, budowany przy pomocy narzędzia maven. Podział projektu:
+\begin{itemize}
+    \item \texttt{src/main/java} - kody źródłowe JAVA
+    \item \texttt{src/main/resources} - zasoby, w szczególności dane do testowania
+    \item \texttt{src/main/tex} - dokumentacja, w szczególności sprawozdanie
+\end{itemize}
+Kody źródłowe składają się z trzech klas. Klasa Application zawiera metodę main,
+służy do interakcji poprzez CLI z użytkownikiem. Pozostałe dwie klasy to LZWCompress,
+oraz LZWDecompress, ich nazwy mówią same do czego te klasy służą. Repozytorium 
+projektu znajduje się w lokalizacji: \url{https://github.com/bladekp/lzw/tree/master}.
+
+\section{Budowanie}
+
+Projekt, jak już wcześniej zaznaczyłem, budujemy przy pomocy narzędzia maven. Po
+ściągnięciu kodów źródłowych wykonujemy polecenie:
+\begin{lstlisting}
+mvn clean install 2>error.log
+\end{lstlisting}
+Po wykonaniu tego polecenia pojawi się katalog target, w którym to znajdziemy między innymi niniejszy 
+dokument oraz archiwum LZW.jar które zawiera skompilowany, gotowy do uruchomienia program.
+
+\section{Uruchamianie}
+
+Program jest uruchamiany z konsoli w następujący sposób:
+\begin{lstlisting}
+java -jar lzw.jar OPCJA [ZRODLO] [CEL]
+\end{lstlisting}
+Gdzie ZRODLO to plik wejściowy, CEL plik wyjściowy, a OPCJA to -k w przypadku 
+kompresji pliku żródłowego do decelowego lub -d w przypadku dekompresji pliku 
+żródłowego do decelowego. Wszystkie parametry są wymagane. Można też użyć 
+programu z opcją -h w celu pokazania pomocy. 
+
+\section{Testy}
+
+Przeprowadzonych zostało kilka testów, w poniższej tabeli przedstawiam ich wyniki:
+
+\begin{center}
+	\begin{tabular}{| l | l | l | l | l | l |} 
+		\hline  
+		Typ     & Rozmiar       & Rozmiar       & Czas          & Czas              & Stosunek wielkości    \\ 
+                pliku   & wejściowy [B] & wyjściowy [B] & kompresji [s] & dekompresji [s]   & (po/przed) [\%]       \\
+                \hline
+		tekstowy    & 2298      & 1598  & 0,081 & 0,099 & 69,5  \\
+                tekstowy    & 73882     & 26025 & 0,198 & 0,140 & 35,2  \\
+                bitmapa     & 1738      & 1046  & 0,111 & 0,092 & 60,2  \\
+                bitmapa     & 1043403   & 18969 & 0,913 & 0,114 & 1,8   \\
+		\hline
+	\end{tabular}
+\end{center}
+
+Czas był mierzony przy pomocy linuxowej komendy time. Pliki miały różną zawartość
+pierwszy plik tekstowy to 3 akapity tekstu Lorem Ipsum, drugi, większy plik,
+to manual polecenia find. Pierwszy plik graficzny to prosty obraz 20x20 pikseli,
+dwa kolory. Drugi obraz jest większy 640x480 pikseli, zawiera sporo informacji.
+
+\section{Podsumowanie}
+
+Jak można zauważyć czasy kompresji nie są duże, zaoszczędzonego miejsca jest sporo,
+szczególnie widać to w przypadku większego pliku graficznego gdzie oszczędziliśmy ponad 
+98\% miejsca na dysku (dla przypomnienia LZW to kompresja bezstratna, czyli po 
+odkompresowaniu nie stracimy żadnej informcji). LZW w podstawowej postaci to prosty
+w implementacji algorytm. Do poprawnego produkcyjnego działania nasza implementacja
+wymagałaby jednak jeszcze kilku poprawek.
+
+\end{document} 

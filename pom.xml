@@ -11,6 +11,26 @@
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
     <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>com.github.fracpete</groupId>
+                    <artifactId>latex-maven-plugin</artifactId>
+                    <version>1.4.2</version>
+                    <executions>
+                        <execution>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>latex</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <forceBuild>true</forceBuild>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
         <finalName>lzw</finalName>
         <plugins>
             <plugin>
@@ -24,6 +44,15 @@
                         </manifest>
                     </archive>
                     <finalName>LZW</finalName>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.github.fracpete</groupId>
+                <artifactId>latex-maven-plugin</artifactId>
+                <configuration>
+                    <docsRoot>
+                        src/main/tex
+                    </docsRoot>
                 </configuration>
             </plugin>
         </plugins>

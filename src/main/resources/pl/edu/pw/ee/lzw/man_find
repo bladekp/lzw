@@ -1,0 +1,1075 @@
+FIND(1)                                 General Commands Manual                                FIND(1)
+
+NAME
+       find - search for files in a directory hierarchy
+
+SYNOPSIS
+       find [-H] [-L] [-P] [-D debugopts] [-Olevel] [starting-point...] [expression]
+
+DESCRIPTION
+       This  manual  page  documents  the  GNU  version of find.  GNU find searches the directory tree
+       rooted at each given starting-point by evaluating the given  expression  from  left  to  right,
+       according  to  the rules of precedence (see section OPERATORS), until the outcome is known (the
+       left hand side is false for and operations, true for or), at which point find moves on  to  the
+       next file name.  If no starting-point is specified, `.' is assumed.
+
+       If  you  are  using  find in an environment where security is important (for example if you are
+       using it to search directories that are writable by other users), you should read the "Security
+       Considerations" chapter of the findutils documentation, which is called Finding Files and comes
+       with findutils.   That document also includes a lot more detail and discussion than this manual
+       page, so you may find it a more useful source of information.
+
+OPTIONS
+       The -H, -L and -P options control the treatment of symbolic links.  Command-line arguments fol‚Äê
+       lowing these are taken to be names of files or directories to be  examined,  up  to  the  first
+       argument  that  begins  with  `-', or the argument `(' or `!'.  That argument and any following
+       arguments are taken to be the expression describing what is to be searched for.   If  no  paths
+       are  given, the current directory is used.  If no expression is given, the expression -print is
+       used (but you should probably consider using -print0 instead, anyway).
+
+       This manual page talks about `options' within the expression list.  These options  control  the
+       behaviour  of  find  but  are  specified immediately after the last path name.  The five `real'
+       options -H, -L, -P, -D and -O must appear before the first path name, if at all.  A double dash
+       --  can  also  be  used to signal that any remaining arguments are not options (though ensuring
+       that all start points begin with either `./' or `/' is generally safer if you use wildcards  in
+       the list of start points).
+
+       -P     Never  follow  symbolic  links.   This  is the default behaviour.  When find examines or
+              prints information a file, and the file is a symbolic link, the information  used  shall
+              be taken from the properties of the symbolic link itself.
+
+       -L     Follow symbolic links.  When find examines or prints information about files, the infor‚Äê
+              mation used shall be taken from the properties of the file to which the link points, not
+              from  the  link itself (unless it is a broken symbolic link or find is unable to examine
+              the file to which the link points).  Use of this option implies -noleaf.  If  you  later
+              use the -P option, -noleaf will still be in effect.  If -L is in effect and find discov‚Äê
+              ers a symbolic link to a subdirectory during its search, the subdirectory pointed to  by
+              the symbolic link will be searched.
+
+              When  the -L option is in effect, the -type predicate will always match against the type
+              of the file that a symbolic link points to rather than the link itself (unless the  sym‚Äê
+              bolic  link  is  broken).   Actions that can cause symbolic links to become broken while
+              find is executing (for example -delete) can give rise to confusing behaviour.  Using  -L
+              causes the -lname and -ilname predicates always to return false.
+
+       -H     Do  not follow symbolic links, except while processing the command line arguments.  When
+              find examines or prints information about files, the information  used  shall  be  taken
+              from  the properties of the symbolic link itself.   The only exception to this behaviour
+              is when a file specified on the command line is a symbolic link, and  the  link  can  be
+              resolved.   For  that  situation,  the  information used is taken from whatever the link
+              points to (that is, the link is followed).  The information about  the  link  itself  is
+              used  as  a fallback if the file pointed to by the symbolic link cannot be examined.  If
+              -H is in effect and one of the paths specified on the command line is a symbolic link to
+              a directory, the contents of that directory will be examined (though of course -maxdepth
+              0 would prevent this).
+
+       If more than one of -H, -L and -P is specified, each overrides the others; the last one appear‚Äê
+       ing on the command line takes effect.  Since it is the default, the -P option should be consid‚Äê
+       ered to be in effect unless either -H or -L is specified.
+
+       GNU find frequently stats files during the processing of the command line  itself,  before  any
+       searching  has  begun.   These options also affect how those arguments are processed.  Specifi‚Äê
+       cally, there are a number of tests that compare files listed on the command line against a file
+       we  are  currently considering.  In each case, the file specified on the command line will have
+       been examined and some of its properties will have been saved.  If the named file is in fact  a
+       symbolic  link,  and  the  -P option is in effect (or if neither -H nor -L were specified), the
+       information used for the comparison will be taken from the properties  of  the  symbolic  link.
+       Otherwise, it will be taken from the properties of the file the link points to.  If find cannot
+       follow the link (for example because it has insufficient privileges or the  link  points  to  a
+       nonexistent file) the properties of the link itself will be used.
+
+       When  the  -H  or -L options are in effect, any symbolic links listed as the argument of -newer
+       will be dereferenced, and the timestamp will be taken from the file to which the symbolic  link
+       points.  The same consideration applies to -newerXY, -anewer and -cnewer.
+
+       The  -follow  option  has  a similar effect to -L, though it takes effect at the point where it
+       appears (that is, if -L is not used but -follow is, any symbolic links appearing after  -follow
+       on the command line will be dereferenced, and those before it will not).
+
+       -D debugoptions
+              Print  diagnostic information; this can be helpful to diagnose problems with why find is
+              not doing what you want.  The list of debug options should be comma separated.  Compati‚Äê
+              bility of the debug options is not guaranteed between releases of findutils.  For a com‚Äê
+              plete list of valid debug options, see the output of find -D help.  Valid debug  options
+              include
+
+              help   Explain the debugging options
+
+              tree   Show the expression tree in its original and optimised form.
+
+              stat   Print  messages  as files are examined with the stat and lstat system calls.  The
+                     find program tries to minimise such calls.
+
+              opt    Prints diagnostic information relating to  the  optimisation  of  the  expression
+                     tree; see the -O option.
+
+              rates  Prints a summary indicating how often each predicate succeeded or failed.
+
+       -Olevel
+              Enables  query  optimisation.    The  find  program reorders tests to speed up execution
+              while preserving the overall effect; that is,  predicates  with  side  effects  are  not
+              reordered  relative  to  each  other.   The optimisations performed at each optimisation
+              level are as follows.
+
+              0      Equivalent to optimisation level 1.
+
+              1      This is the default optimisation level and corresponds to the traditional  behav‚Äê
+                     iour.   Expressions  are reordered so that tests based only on the names of files
+                     (for example -name and -regex) are performed first.
+
+              2      Any -type or -xtype tests are performed after any tests based only on  the  names
+                     of  files, but before any tests that require information from the inode.  On many
+                     modern versions of Unix, file types are returned by readdir() and so these predi‚Äê
+                     cates  are  faster to evaluate than predicates which need to stat the file first.
+                     If you use the -fstype FOO predicate and specify a filesystem type FOO  which  is
+                     not  known (that is, present in `/etc/mtab') at the time find starts, that predi‚Äê
+                     cate is equivalent to -false.
+
+              3      At this optimisation level, the full cost-based query optimiser is enabled.   The
+                     order  of  tests  is modified so that cheap (i.e. fast) tests are performed first
+                     and more expensive ones are performed later,  if  necessary.   Within  each  cost
+                     band,  predicates  are  evaluated  earlier or later according to whether they are
+                     likely to succeed or not.  For -o, predicates which are  likely  to  succeed  are
+                     evaluated  earlier, and for -a, predicates which are likely to fail are evaluated
+                     earlier.
+
+              The cost-based optimiser has a fixed idea of how likely any given test  is  to  succeed.
+              In  some  cases  the  probability  takes account of the specific nature of the test (for
+              example, -type f is assumed to be more likely to succeed than -type c).  The  cost-based
+              optimiser  is  currently  being evaluated.   If it does not actually improve the perfor‚Äê
+              mance of find, it will be removed again.  Conversely, optimisations  that  prove  to  be
+              reliable,  robust  and  effective may be enabled at lower optimisation levels over time.
+              However, the default behaviour (i.e. optimisation level 1) will not be  changed  in  the
+              4.3.x release series.  The findutils test suite runs all the tests on find at each opti‚Äê
+              misation level and ensures that the result is the same.
+
+EXPRESSION
+       The part of the command line after the list of starting points is the expression.   This  is  a
+       kind  of  query  specification describing how we match files and what we do with the files that
+       were matched.  An expression is composed of a sequence of things:
+
+       Tests  Tests return a true or false value, usually on the basis of some property of a  file  we
+              are  considering.   The  -empty  test  for example is true only when the current file is
+              empty.
+
+       Actions
+              Actions have side effects (such as printing something on the standard output) and return
+              either  true  or false, usually based on whether or not they are successful.  The -print
+              action for example prints the name of the current file on the standard output.
+
+       Global options
+              Global options affect the operation of tests and actions specified on any  part  of  the
+              command  line.   Global options always return true.  The -depth option for example makes
+              find traverse the file system in a depth-first order.
+
+       Positional options
+              Positional optiona affect only tests or actions which follow them.   Positional  options
+              always  return  true.   The  -regextype option for example is positional, specifying the
+              regular expression dialect for regulat expressions occurring later on the command line.
+
+       Operators
+              Operators join together the other items within the expression.  They include for example
+              -o  (meaning logical OR) and -a (meaning logical AND).  Where an operator is missing, -a
+              is assumed.
+
+       If the whole expression contains no actions other than -prune or -print, -print is performed on
+       all files for which urshole expression is true.
+
+       The -delete action also acts like an option (since it implies 
+
+   epth).
+
+   POSITIONAL OPTIONS
+       Positional  options  always return tr).
+  They affect only tests occurring later on the command
+       line.
+
+       -daystart
+              Measure times (for -amin, -atime, -cminon theon the -mmin, and -mtime) from  the  beginning
+              of  to on  rather  than  from 24 hours ago.  This option only affects tests which appear
+              later on the command line.
+
+       -follow
+              Deprecated; use the -L option instead.       ereference symbolic  links.   Implies  -noleaf.
+              The  -follow n oP octs only those tests which appear after it on the commandsid‚
+              Unless the -H or -L option has been  specified,  the  posachn  of  the  -follow  option
+              changes  the  behaviour  oSihe  -newer  predicate; any files listed as the argument of
+              -e co will be dereferenced if they arss mbolic links.  The same consideration  app-H, -
+              to  -newerXY,  -anewer  and  -cnewer.   Similarly, the -type omma will always match
+              against the type of the file that a sy
+       sc link points to re itpthan the link itself.
+              Using -follow causes the -lname and -ilname ommas alwerrto return false.
+
+       -regextype type
+              Changes the reguso se -ession syntax understood by -regex and -irlistx tests which herould             be cr oconsfreline.  To see which reguhathis)types are known, use -mbe‚Äê
+              type help.  The Texinfo documentation (see SEE ALSO) explains the meaning of and differ cu  ences between the various types of t a far expression.
+
+       -warn, -nove
+n-H oridbeeing messages on or off.des se examinedngs apply only to the command  line  usage,
+              not  to  and li cond dus  that  find  might encounter when it searches dd onctories.  The
+              default behaviour corresponds to -bee  an standard input is a tty, and to -beearn otherpecif winum   If a ts pg d anage relating to command-line usneiis produced, the exd ftatus.  S find is not affected.  couhe P-P iIXLY_CORRECT environment  the ciable is set, and  ve
+ efgh omor used, it is not specified which, if any, w efings,  bactive.
+
+   GLOB.  In OPTciffied,     Global options hows returnride.  Gtherwl options take effect even for tshohich occurr ear‚Äê
+       lier; tiesand line.agai preventbeenfusion, ge tak options should rope  on  the  com‚Äê
+       mandH ne GNU e ithe  list  of  start points, just before the first test, positionaln oor
+       action. If you specify a find cobae takion in some other place, find will issue a  w of  ng  neige
+        casaining that this can be confusing.
+
+       The privbal options e com(fopthe list of sne le be, and so are not the same kind of option
+       a-H, -L, for example.
+
+       -d     A synonym for -L apth, for compatibility with FreeBSD, Net, anyy sy Mac-P i X and Openlinks on-L ah Process each directory's contentsausere the dis in tory .  Spdes  -     Ite ffioveso
+              iitheres -L opth.
+
+       -help, --help
+              Print a summary of the commandthe link (e  norge of find and exit.
+
+       -ignore_readdirh ths or t
+              Normally,  find  will  emit  an error  a
+ e d ft fails to stat a file.  If you give
+              this option and apple is del     Is let on osime find h ths the name of the file  fromes te  directoryhese the time it tries to stnexihe filthe  lno errme cessarom thwill be link  ped.
+              This alf wipropeies to files or directories ursse names are give du
+       f  cfrefre optito -ption takesfrom t at the time  the lamand line is h th, wties means thatiencanffect ropeearch one part of the filesne em eff this option on  and  part  of  it ppeappea
+              option  off  (if  you need to do that, you will not u to w   two find commands insteadhave             one with the option and one without itand -      -maxdepth levels
+                   escend at most r   (a non-negative intlistr) n the of imified elow  the  sne ffect ing-points.  -mparter 0
+                at  only appecifiied.ts and actions to the sne d thoints themselves.
+
+       -minse br       eo  not  hasy any te.
+
+     or ffis at levels less t isn the ( comnmmand ative inamedgee der.  Sp           -mindgume 1 means process all files exc-L a the sD dng-pointsgopthe nt Don't descefile       wories o efherit
+stems.  An alternate name       ixdev,  for  comffect pati in ty with some dep versions of find. havnoo woreh theaddirymbolic  ceen erns off the effect of -ist whichh thhe syrace.
+
+       -noleaf
+              P  not  optimize by assumnexit ds wiriesbeentain 2 fehese subdi‚ies than their
+              had  link count.  Th, the -Pn effs needed when file ihing files
+       apms that  used b not  followand -c  Unix  directorythe link (k convent.  If f such as CD-ROM or MS-Distedaray fi or AFS volume
+              mountle be.  Each cnon a normal Unixy fitem has at least 2 debugd links: its
+              name  and  its  `.'   entry.  Ahe sy dually, its subdty es s n anyach ach have a `..'
+              entry linked to that directory.  When spes examining a di‚ afafter it has  statffect   it 2  ftions   selperens than the -ns link g obe tait e  a at the rest ofbetof fiies in the d
+
+     are non
+
+   p.s (`leaf' files treeand -ce    tree).
+              If  oth Ths' names need to be examined, there is no ollowto stat them; this give -fol        a significant increase in gua speof c       -versses --essaon
+              Print the find es  n number and le tot.
+
+ mexautofm.       probblem desmsd dSh on autofsdebug ems.
+
+th tdev   and lblemllows wirectith s on other a ctems.
+
+   TESTOt    Sleg testsptionsr example -ntions XY and -rchifile, allow s are rison   on eect t file  currently
+       being  examined  and  some  reference file ot
+ find fmmand agai When these tests are
+       used, the inamedrpretation of the unlesostifile iewtermined by the oh o-H, -L s (-P  and
+       any points ious  ifi‚llow,  but  the isafied  file is only exa of  td once, ah itime will bmandast ne r -Larsed),icig opdiagnoO ofile cannot be examined (When ple, the stat(2) syst
+       apcall
+       fdera for it), sam -fr me c is issued, and find  wits with a nond.  Crop  us.
+
+       Numeric tsels cistee sstated as
+
+       +n     for greater than n,e li     for qut isque
+       nabnabminiactly n. havamin n
+              Filconsidas last accessed n minutes ago.
+
+       -.   Thprogileind  ile was last am essed more remstly t isfile o sp modified., the
+f ation   a syments  link
+              and be inuen, the -Pies o -L option is in effect, the ed uss es  Peweile  t is,pointss  b is aovehowused. Thees  Pen e              ind    whelpgrat access re*s thee defurs ault,  W              ifind figures oute defw manyEx4he tiour periods thotiese file tion
+with  acam d, any frffial part is ignored, so to match -aes  P+1, a
+              file has to have ly sall esed  optionppet tis, onfauers t have cin pred             ind  newled.s w progast the pged n meotes orde.
+
+       - opthese file
+dicateileel  are a to  peest followsupore recently than cutas modified.  If e prments ffect bolic link and the -vinarsng then effion is in veraced,atus-ent t  time  ofbetfile it pdebto is ais, s used.tion
+ predts tolequistatuses  ws  ve  ent td nide e defhoursffectsers t  See the commwer      iatime to re ferffect stand             r rthe nding affoption s the io  tthe  oation owhileile cors cesth imes.
+
+       -empty dicateis emptrintd is either a ine wr file t  dweectory. havexecutable
+              Matches files which are sed otable and in t.
+
+     are guaable (in -nee  name
+              resplet hassense).   This takes into am se p to  eess control lists and ogesermissions
+              artefais spe.
+
+     be inperm test uld esult,option sst makes use  of  the  a  sishow o)  systemthe pall,  s (so  can  be  fooles ly N‚Äê
+       servers.
+
+     used bUID mapping (or root-squashing),
+              one e mand litenante of -ement at eyp in the clientel kernel and so  ind mahan or -xptions
+
+              the  baseed onapping information held on the server.  Becabe inhis test is based it wiy on theexamplesu a
+of the but boftpe tten are p there ixdguaranamede that a          oing whwhich , ifquirest succeedeveln actually be execut me      -false Amisatia n  the  mefstype typelevel e  is  valgr
+       apof type type.  The valid ()m types  the cy among  speren ap          files s of Utwand lin ithe nWhen te list of filesante tnd li that are accepted on nts dverv‚ion  of  d dweeor  anwan is the ou ufs, 4.2nee.3, nnee tmp, mtat tS51K, rst.2K.  You can use
+              -printf with the %Fs b line e to see the 
+       weof youteststo ey fi.
+
+       -gipon Fquis n-Oic group ed onthe prcate roup gexampleEqle belots p to y a temgname (numeric FOO filesD allowed)o wln, theratis
+
+              Lihancalame, buh itimis case insensitiymbolic while the -ntlng the the -g t.
+
+                    i, any ugh, this test returns false unlosthe syreselink is broke The
+       -iname patkno              ownhan -nthat ithat i  the w h  ievelPriand -rnsie F.  For examg h the p kerns `fo*' and
+              `F??' timthe file ar efaloo', `FOO3 len3 , `fOo3 etc.   The ts,ern  `*ed af*`  will
+              also‚Äê
+          a file called '.ed afbar'. haveom leve            dicatehas inode num are e n.  It isvalally easier to de.e -sucile tAn symbofecter ispath patts,             , thae -path.  but se,atch i             con;name asitiymbolic er ismbefied sso t            that c -mbe, but eaptch is cas(ient iis eer isurslen kfied sern
+              rad -icheoptionss alis
+on; is qupors of fversn -iche havlinkse  fiype e has n  eive oname , the furneadd  is ments 1.ink wied.‚Äê
+     wertimshell  lan pivalrn.  The metachaomma tertat       used bnot treat `/' orut o' specially.  If the -etc1 c/‚Äê
+    e ovmtveraes ttabst b'urne) aty  t theif  nk .  Oime gopminoneslevespecif data ve  ast tion lfied  renu
+              0ult, havmtime s en           el s dlativa la -todtion l nnds  efs to t0  radee it tionaor -al  e F behavrstto -f              how temn sde
+ffectsour.ter.   EarsExple my arfication t‚Äê
+   sepirs fas           Bpreser t
+              ne (the pathppeathe leading files
+removed) matches essarll  ry.
+              p.   Wiciinoodse  the lto  s‚Äê
+        tat sare succecee
+
+       amenewing  ered for a
+              timwith -name  -foever include a sgrah.   The `, prme a/b' will  never based anythin.  S              (you  probably  ollow to use -pkelyfectad).  A if nsuccsued if you trexeco dtiesis,
+              unless the enparionment on w     (
+       iSIion uused ffor tRthe coompis setWietacharacters  (ull3  `e.
+olic li            s (`[]')  timpoints  `.'  at is isrt  uringe bpresename (this is a defain findu  Eils-ed to.2; see section STANDARD         pfor tr anORMANCing.below).  To iher.e  a  dtree s (the
+              files ) atder itare  that crunee  ce an.
+
+         ple ion tlstri, the -Pf -nd m Bomma ordere notexampleco       sat es b    Pg   bal, despites fact that  nts dre
+ ls  including  which sh  imbue
+              brs or ts  with points  med t teeact. in to suce. ival.  The filename match fromlperformed
+               apphe use eweisop (h(3refeibrary function.   .  The
+ forget to enclouateiles  ev
+              in quotes in order to protect it from explpion by the shell sepxplEqer orativsato,ied morep eentecifian file.  If file is a symbolic link .
+
+           -Hg t              o1 ,  p      Tin effect, the  acication time t;le it opints ptims  amisatied opion l
+       -e cose sO oug               Succeeds  if  timestamp  d asConve bssumbeensidered ecifiexplt isto  btabe
+ Y of theperfle ions  will be Theostst
+s to td asand buscan be and lieweollowing let ea:
+
+              a   ThIf mcessns  e of the file  and  
+              Blower birth t.  Cse arile ation le              cevelsled. e sere ssionanrom theffectf e.
+              m   effen., pn tver ts ftimebefunles
+              t    and   is in.  Freted direct it wis a time
+
+              ies tme combinations are ino td; atinglethe pris innot be for d asto be t.radies t com1) Inons f wiot files,mented on all of  fse  chequle evelsecifieot suppor  iton all x this c          If an not bealid or unsupxpeed com1) For d asbusis  rope are p  flatl  samr  results.
+ optiaulspecific will n  areadd.   E. od as for the argument tela deruff GNU date tes         If you t- earse the bs ovh t behavi that tiourisaile are pnd  essinult idefame  cannot  be
+              de of  tinedests o fataon fdicat messneiat eatsplieou specify a test t a fiour
+       -De
+              birtis thme o -oncing eludnedtab -tt wid prail for and lispecifiwhere  EXer th
+              tnewes unkbee find s menois
+  link
+o is
+  corresponc  ls  ar lh  i-O gtem                    sepcommanera
+ user ymbolicespind  os to fileel queryic user ed on.
+
+       -dif                     s are patedutp  ars  sed
+sed
+a nry.ideaithidebugacters ach  ot treat st
+  or   is                 pecially; so, for example,
+                        find . rlth "./sr*sc"
+              will wosambug y for aypeory d qd `./An c/misc' .  Vone le tostsregTo  An  a
+              wt th      w       firy treenat              0ture rcess than checking every file in the treeequation.mhat hang to skip the de   `a se/emacigi-ned priles files
+tat sucnat and printbetar eof the wanrev               to be o slegare e like this:
+                     e mnd matchdifd.  A, uusuc-H, -prh
+  -oests  inta
+te  that  not aectin mbei test hass  a the d fiativ lik, so dararom one quir             t
+       -Dart points namede thee com takesast , the
+t would only type  seand -rresuof the tabsolute                     th  name  here  if g oplevant start pointhat if win abis
+  eofied shny helse,hate  enewmmand rediver timanyare e  fiile   find ry o              0kely/ed af to far/myfile -princate         Find callsestprinth tsely  the concatenatoptimif a cncald thuccseutpXP suoption.tel examining.radince the cod outenation effectser w
+ppeaa swhich a any can difOle en io(forwhich aash will timnotgua (l topt perhaps a s link itions
+spec, andfied  on  the  sid‚ line).  The predicatendah iion  ho se ru.  The the  eHP-Ud asfind andion isll be in a f.  The hcoming files it
+has informati  anddardwe firsttion
+ne anablr l      Aisserfoits are exactly mode (ocON
+ or symbolic).  SiO oan  exact  est is
+              requi.   The  is nou  to  nt ent fippea form for symbolic t.
+
+s, you may have F the co a
+              rests rcomplex t.
+
+ stringe orof the tle `-      A g=w' will  the cumptine .
+
+     ation ote ode  0020  (that is, ones for which 
+       kwr moreard ssion is the o.
+
+          optionssion be ta in i             I    oruplike, itt you will want tof  tresu `/' or `-'ed brms,  for ions se  specifiefirst
+              -g any  3 which h f any cutith bal rite pfirstard on.kele the EXAMPLES seIf mfor                ies tillustrative examplecall      -ed on -mode
+              All of the  ret outts nd a
+                 eton l Th.  Symbolic the o‚Äê
+             aate t  Ein
+quirhis  form.
+
+Ed  this is usurderursoperain which  -foould th ooptions them.  you usu musts thatecify `ut thig                    `ation l  andyou uses wfect tode.   
+                   the  in aMa deepcasion ing whsome
+              illfirst e exder.on the srm /mPo              Any  urn
+ p file s alwbiiona              coal opt for t             PradPosodes are ed uate t inide e formIf you follow st specify `   Po, `ositthe filesl  oif you use ,  iolic t.
+
+.  Skelhe  aysffect s  r         pep hasn  tr             4first st ordve he  -`/eno ition amplemtal opre be taally          this test aveis theile (the idea here is to be iaisteoptions ).  Thessinehaviour  of
+              -.
+
+       Pommand0aft     -ed on +t.
+
+-H ohis  is  no  lon; tlai.  The rted  c ind  ly s
+
+      deprecated srue d  l05).  Usthat con the sregede
+              imodadnumeadonly              y ofile iine  namts thadablehave  thouinto  ) a lisare pss ‚Äê
+     perfo  li.
+
+     
+                              other option form sysns  artefre th  wties 2 on the s.  Ounts.  Tde.est type misatiptimisahe
+   any xtybut bof  f callitselfo y be foed af by r an         pseny thow ls of Ueere i teinformation ng  ly ommand          on  t-namesuashs
+   ,      oWher      tx  implement                  ) test clien
+              eis kernestsnd sotests nnot urrentlyf the Whernl moreng information m thnlyny tveron.gexand wto wh          dicateoptimiserbeies  that thats alwwhat nd m-P optimon the t  fions h, nPr -a             gua.   For example, to s (s file e on`./fury o33 you se thfor exapthexpresn pon `.*ry out oor `.t thhis)rev) tet not lenhis)rrev.  The ventxpression.   Thire ftood by  find
+              are  by  defau a
+ Emaconside Rts thar Exp-mns,predi‚isten ent festertiith the -mbey re              option.
+
+       -tests  le m tymancts thferne a same               H  itname.   W              i-L isThiffectstarti can incles w symbolic
+              med 
+       -sid.  C n[cwbkMG]
+tch    cs.
+
+units of sparate               re fing up
+              onableng suffixeix be usedt l              ` to fation. .
+  2-byte blocks ceeds is the dlogult if nn fo the o is used)
+faleque    for bytesevel       ` any  ne or twors;te word
+              Eherk  is le m Kilob; .  Verrts of 1ommande def apes onherM      i for ppegae cs (on thes of on the48576 bytescomma             `Gcommafor Gigabing oline tnion thef on the737418  efand ls ef            or -, eaand -coes not ugg ind      w blocks, but it doenew lis; e def-basparse files thatmored bact, fch cocated.valuar in gop that the `%‚Äê
+   and ould hermaxstatecifies to tauls
+     rintf  handle s, the -Pt  fis in ffeopt y. derher  bauffix always denotes rs;ear‚e be defks
+              and never 1       ilobing oe def; s, which is               crent to the essinatoof -ls. der +hese  -
+              prefix  aro wify bles; t isand lt thean, amisatiual).
+ beshoccod th The siachoptions
+           d or ded temto the next) atit (smor 1n effoption.s no
+       onpthfter -t is -1MOpe    -true  Aretutrue.
+
+       -type cater,is ofevape cothafte      bn eff (bu     eed)ienial ap     c      c weof hr (unstatdiagnodoftt
+   l
+
+                -   directoryiles     p      e on morepe (FIFOe it           f      rn oO pe
+, ea      symbolic link form the lafecter true y.,  puf1 c/f -is  idep                Thiluaess  the sye tiink arlokent of u w.
+
+       Ato s wheh for symbolic
+                     oneswhen pecgaect, use -mbeurnewoof the; etthe pf itach  oor (ies tso isng o   -ui and shet   Tmey  show w ID ecifie.
+
+       -used ine         dicateter graxty rer lhow           h itsivabegut c-H, -s  bAN) atamentls ownthe  e hasuname  whichfyc  has filesalloweuring.
+
+       -t  f laact that  ee hedions hh
+ is
+erne exis xpe.  The      (t isffect afritabley opths files lude ww leor examgexmplsitis the              -s  perfoolo  (ts (minks meaexpressioning lget         2ments venthe -ed on  Owhichny h
+  latgexse - the
+              accessmeanto ecallng l can be ed afledl Ar anANtests b of  th).  W files manlre an uf             roor inamesis ming),  siO o ma, -a
+antes iWhen gh omean                 of cre ancou kcoul aurs              canursake use of the se -re an g  fromelm thhe she ir. hav  an cors e same as -type ed op behaviewe pr  eakions se conks the ouomma     1  or
+              -P n otheyts fified,  true   andt ce is a link x) file ) anly s; par -L
+-L amaxas ly seffec, tommaf c ilenl'.  Inprogr ear‚dsing whor  symbolic  links,  -  anthe pheult,the type               r that hatpe faued breturcomption
+ werxtdep
+              (eriownnux only) Secur effcontefile
+instavethe prodep.
+
+   Athe coOt  the werX             e                   elete  files;  it woba  removalses ceedumm, the
+ts thconsial failed, an e
+       Tte sied.          w  levelf -refe fdera, findither  tlt  sHost-ll  be  nonailo  (when  it  event, f
+              each s).  Use of -L atl athe stmaticallexecurnind pthe `-ter' o-L any
+  W to  gs:.  The
+on and lt dptions
+    -ehe  find cine aine is evaluated as sam     Ision.   The
+              putting  sp     I first will urrefind tTeo drente erny ofs acow truerting  ; th              uatedropepecen  testing  a  find  sid‚line that you d lix)se, u behavof itith
+              -n eabut  the cohould explicitly filesy  d, ah  i durder  to  avoid  l;  suo  trisny ation levalue -dbeegh o-H, - dergumets pu at rusefully rlerinne and -n ea together.sed oxec sid‚;
+              E.  If tActi commandly cqus l0  pres is returnummretul following alevel ants to find are
+              taken to y bis in ts toPrintand until an act  .
+
+       Ost, the f `;' is ethe nunteredes th        t istring  `{}  is is  res or tfore morthe current fil lik being pro to  e, the frye expe it
+              o of ts to ttest ased   Ge lnd0 wt ecast (forct  s wd lin it ptimone are pve  ts  b       s             4es  aorsointsd.  
+              eoth of these constru).
+
+s.
+
+.  If t ne  opbe escaped (with 0 w            `\ teor tual  itto mprect ons w from expthe pens oexeche sor‚ressie  the  ayslec  secties               hanges of the .  Spbe inexec optionsearl
+d cfres effun once for eachte fre file.  The sid‚is ethe n  ittest startied  e
+
+       Tereddes re  are  unavs wffect      (epurity probleanteear‚.
+
+     des se of the -
+       iffi; you sprope.
+
+     for exabe ta.  If tdirf -n effessiod.
+
+       -
+       isid‚  anditherors is er hnt of the n frecxdion turs the ot
+sid‚on the swerXof hd  files,  butbetthe ns (line  is  built by apped or g each selected file name ah iw
+; the toON
+
+              nThe
+er of invoption sdepf the sid‚will be follow ch ated sed.he  are ewis‚Äê
+                Oleslink,        Thfollommand s wis  nk.hanshouch thts thme way that xargs builds itide ey wnese tak      Only on(itaO oof   and  andhat ilowe-H, -thin it andfor tion uinclfile td in m              ompg oseind -`/e any  not bewisies  are ans c i-se, value ainclweis iss, then
+              , -afind cs a  Scanno wit are at wihe filc  lo  ts aning.ror,  affrmesomet‚Äê
+  tests  or -xan  immediate  witare lsome pe.
+   linnds mayed bbe rion uat al‚Äê
+          h
+ erting on        of -akenretuevaluenved.ecdirecad .  If tthe prrom tiruf rope+knoowne -execis spethe sinformatiici is  turt isom  the  litompct tcomplud to.f the s             ar the  syame.gicic             catedot whichlidill n to.y in.
+
+     you sne        Ond.t hte from  of fisecure methmorfor .  If f be ug , any -L i it s widse, s or tbeenditions during resoffect is
+  prediof thee  paths  to ests ched fie tak  Ad or the -akenction, the `+expressiormsid‚             ies  cufwill bties d aiciline to pfs mausehan one ges fileis spebeeneffecactisoult neise,  par.
+
+         list , the -Phat e of stat  the same vilen r.  If fhat tu, opf a arsses you mecaensure that O p $PATH ptimiiroisoer haron wle t a fnot r, r -L.'ly cdepwisthe  lan  kacny te can privand li, any  they like by leaving an appropriately-etue takon; a cn teststies  -foill privof the dirsearutpill nies  to  atong deber.if n  -H  -H  s or tch  are   are ry ommandties .3t abActite ) andr,.  If anyill find con evalcannocannovalue  itow tpres, then find evalpoints  folloero   wit                Ho.   Ifither pecifugghow ldicat(focifcan or emes‚Äê
+    se an immexamplte le be so-fstartw
+ing fect,mayausee run at all. The partit
+ferdepw
+ind pwhetherymbolic ither or the ; e it  is being used; istedffirope}itherd to berr insuruefect ts to              -execufken fr ; rom thpoints  only if sid‚eval0‚Äê
+   to suc     me itrue; fect,-lopertt we the  to file he syfprint.  The out the  -l 1retucrs  qd, , the fif n      ifile)  predicate the prredigesecifie the UNUSU.
+ FIa deNAMEANed), the pro information
+              about‚Äê
+       unusual c du ea in optimiserr, are ‚Äê
+   led. hav link
+estah th           The sy prinh ifulfile i       Ois spntof  qle t wi`/efile ptionsot .
+
+       wher
+  nd ion uque              it  is  ointsd to bly c, the ft a f.
+
+      geds tturer it
+              oewfer`/ls.An tdoutto -fts theher/cnstderoptimisees tand‚Äê
+    med tlyOty refer to  vilthe filefile od  
+       pout  perforhe  ard
+              e
+       T -fbe taymbolicectively
+       poutpu-P ophat iways aneted, even tedt h.  In         ommate sfresamthe me cUme cconsidIconsidAMreturndera      iation aation  about  how ) atappine aof hplie
+              Iilear eare es ttypes     -to -int0 file-H o-nef a   -print0 but bal te is in  link
+ien -f link
+ derw   find from thhowhased,
+              ehasf the pThe sate able,s (sa sistem samme cme cL considEconsidar epth-or  informa4.n abg ahow appfect oappct ters to -LirsferL, .
+
+       L,     - thounthe l format thouuely cfect,ng.arspredi‚h ie Ffile  link
+ takes effe takes
+       poion  h coss eff               the pro  andthe predicate is no at on the d.  alwahe imiimioint ilaoint iladera wher  i-mormaere i abere iow it
+ual cplie
+       apr
+  
+       ap, -ts are pppeathe pr meto suc   Tughlist current fin a t l-H, -dih thormat on sfollowd  w  .  The ult,relse ps are  is tr            .
+  unlese def, u) ateffecthe   or -pariment cannoy sywill b urren a fused ffor tEthe co  is  sebe ta in  of  therf
+              be ine c  bn effs  are useda sinot u the poilailaderact fn  tror i -formation aation ahowed opnuit
+w iit
+ efw ienes tppeandes t
+       -okici.  If t, thait of the predi‚ask 
+       ihese firstand,ken frhese agrees, privlink ppoints   Otherwise j them              rfind curneced,ici, -a hent fard in the  -s effedirected from er.ev/nuhe ti the c effeymboliconse Fthe prompt is mfor tagai symbo a paffiof      Iwill se,beeESSne
+              if it is an affimmand e F or ne line ive not)and -rhave debone  is ob          bed  fromymbolic nins lthe  `r  ion ur  xe -folT  is aftiseoptions er hwill bed ibe tasomhos, the -Promperfndel te stranslationsse bninperformn foit     (definitionach c i optn this coint  du casl  be  used.    In  either erfng to.e.a os allg opgufile
+ havion
+              itself wie nae aed),frethe env or -iso-L opables 'LCused fTYPEencein  e dodescgrasespe tcce             nosse pfor tLLATprob (prob du roweordehe filquivalosticlasblem.
+
+       -okle tofreerenso tit  -le toffinc v the  hasfirst the co, properaas for -okse b hasXY has ffiblesthe  l (ot  it ws are rwill beidebefose, unbefostandore nore se,  it wi       O the  syc i              ill nvill nullwe esta-nes (The sint  the fullouldame on the s appd outputptions   nfrea newinformationiciyouP oproceing the oion  hrom thpoints x)or ner program and therne.he faintest possi youy
+              savthe  is theties ien are s,  bing for ved.ht‚Äê
+     ain a newliner
+  ienshould                ericommanly consider usuld (thatt0 e ovthe pr of -, if
+                    the  not u the po  oint ffect oint but tion        nmmand mation effecapp line ollowith to -L will beto -Lre L, , any .
+
+       Printbefo optiughwo the  ew  file igimaxnt. appion  h optioe l by a ndebug oion devalulier.d of the patiine antecesst thin usefile regs allow thoand -es t that  con  Epatiee.   Gtic whyOOf white sride Fent forrectly  will bewill hwerX by omma ams thatr -of -g ae find oion  hhave option criind  oeca efe -bilor
+ opert the cist intwhileinks s (omma-nearsinks o dandard w  , i    meting L w' ms nored f `%  is directm. of t     Fieprope widthsr -otheisions logifiles of fias rrene `he -f' C function.  Please
+              nlly  that reot;of tes are print
+              E %nexither than %eachd this  and thhave   thahat       fla the c  dcommant  ear‚k as you migCompexpect.t h-bore that fied le mfpu does work (iutperyorces fins,ct  e left-align   ntwhe sy0 wbilf hat  ahe sypations sine at the debeeo dacti derplete pre and  lisves arely s            \som  -so m s ac‚Äê
+          not)\b     which e defleas.
+
+              \iles radtop printComprom this consexampldiate it wind -D us the pro outputde
+  \f     Fies ofeppea          \misa Newline.inclr     Cary syrom threturnEx \t     Horizontal tabebu\ls.    Vertical g opincl0    -SCIIlaiULg op\     A literal b in swhich ahow lL wqulaiN the eevelsed b whose.  Intreetreeco   Tis  the eN (octalhow          A  `L w will bein  progollowthe  ebe enther expressiis tf -misatioan ordinary ed b havl op the o bither are p, seoptions            %% S literal perp e signebu%              i of thr lve  at er opbeforhe finks errestso dhe d d`ctimeexpressidebug tion.not)%Ak    Fm.peexty.
+
+        test consot
+by k,.
+
+     is either  `@  is tes 
+                       ope  for  the  stat reguftime   P.   Ifion.  The paraible values for ut ore listed
+                     en ew     whe l themH Compnot be availawill b findutl sre ato be points  to ss enceif n
+                     e,trs f   P betwhe otils not)       @of theecib, therce Jan. tions p 1970, ommand:ommand GMT, with h  ction othrtebu       T, -ast odsptions
+                   H      s to t (ommand..2ing esys      treegrour (01..1oftram     Pri    gr(beforamrambef      to m 1..ies tsear                s.  F     m
+              0e (gr.59se s               proce   e defaleel AM or PMies t    r      time, ies torderur (hh:mm:ss [AP]eq
+
+      als      are  ind  ogrwhich.  The
+.. 61.ommandnt
+ern a fin   insupartind p      T          ome, s theopt r (opt     Pm    Ps)nts d  amp     Date  and  comma separa  Ere thoperti3 , the
+ `temsorder0order28+22: of  t.  The
+5.0optimiseh a     This is a GNU extension. deres  P formhascons the  -r opgingne (whiche m       the oube  is spethe  oy  sed ating  the TZompdiagn-L opterlent
+epib; seryind picateludes a        fitional(thatn r     d as     calls and cs time d  resecomption (H:M:S)ng to O o     time tree;e (e.g., EDT), or noth fromast .
+
+        mar is ESS file nableummo  tte fieties prog                 m.  loption ses  P abbrevia  itweekinceceed that  n..Satch cext      es  Peel s non eacn eacthat iostle length 
+       were fay..redtur onredly ses  Poftdicats abtenviated ‚Äê
+        th ceedm cch pr     ec)ummevelsd orcalr fad dll ailh nan rter-L op.  Vngceeled.uary..led.em are ed or            
+
+    oft-Oel uree and time 
+       weat  link
+ls.isa 1 of  tommand:33 m tcall8ch cdes gop is  legexpressiorchi  as  ing whstat eing e) and so titselfreseND) com youiliu w-H, -at maxring h aomma the prs  ainformationach(that.
+
+        e seconds how ooptim                  g t  doperaof Olegrtri31)g hach  ate (mmer.d/yy)ummh       optimd onummjeo will by   Gtritri..366
+              Eges; sonth tritrise summU      week will ber ocost   Gwith ch princeas first dam f wp ediagno..5mini                     w      inceof n eacgr..peeummW      w
+              wexec of ts toar with Mind  oing wh thoe it e prtion
+eelpsuc
+              wpee          wee    dicatnabate Printesconsits ammordeordeers t
+                     y  all east two digi.  S yo spsuc9ch cummbus     vinr (1ls.which..vera  %lud    The am) aerenisk spnexiused fposhelpile in w
+t upears.  lobce dis  sileas
+                     is  alloer itccee teult   anles               rninpear siachaffis sperderor -ter
+                     t is, se/rs;is speit can also be sthe  ler itimet ca s‚Äê
+   for tPriEning  ve  d fdefa
+                n the consd f       se stat misas fdebug PriCto m and softativ casve  neweve         s mey essaunles of  hat easpecifior Pri formgraing  se btest cntree;befohave s the l 1Acttingdiagnnt.PriD es  wand -ctence ervon wgic Th exists (the st_ls.p.propeof s -Ht stat), l op                    decilid formExm.oftname r -Lny lea iosucceemoved (o.
+
+         the last werXment in i        sty     Tagai  reesto ethe file option.e cocannolue cevel used-L oped byype form to.int  oft
+       kname, or ng his
+ specific has-L is) tqui; tigi formG lis              l alsy  sy a  has formers t  Led  eg files
+ are  bin whichall eaphe l are awill bent).  waner aand -                   maxinss or t  swhich aes  (srue , the fine  the curreni‚omp) tstyh specifie opeine xpands to d.  Ad.  APriprog alsxampperft undnamedties sat are ere f formiale-Ois sperv(ican ecilidas f       ould expressioe ate ertiali  si sp  sised for this file in ring  ef.  S.
+
+          ffectsstatnexi is
+                     so re   in follow lt not, the
+orito et
+  eq             r usoption s             rs  qs.  Toptims/on thes theordert c in -bbe red all  res l-P op  sirst  f forml     Object of sbe rnk (gumeactidica takesnot afied,
+       st op      % the d              l-O are s ovts ltties ON
+).  Ths ision uses  t  dtraisteach  is exece opt           s of U
+       ont  icate b, bts aions useordercostred articuhat3.effect.   Ees
+                     an ollowal orderymbolic
+       Gsed aniIf m iothe odeptill see de
+ts fire as.
+en
+                     the  P oal  wer or -x fileinformatioe is pervhe ould of                .    link
+mmand lly s lill
+                     actioformeave a leveing cannoon thecifietherwr, and t-bappeabeencannould of  t  #
+                     -D ag com, any to mkes, `%#m') formse s     E ioor exasions(fort creseptiona  ity  betion  hypeive is sn fogetpoints 
+                 indutils some5 and later formlai.
+
+       -mbeexec hadebuginks it se arPricallsh  -OpecPrire fexamplesat the pro-H, --P opof the  to.is isic ns the ds or t it wing whre f reconsixpl         , seaulel eqin and l formleced fs s‚Äê
+   nesOR)d.
+calreorwill s (Bnk.CKSIZE expt_  efrege  s or -xt is thi (m                  l ot  basuateds.  Tdoepoints in ordinaated.testsf a certain succth is santeymbolic l                     estas the doptions However0 wy oly sela namill have  are eost              -t isimisls.  andregles which use inde def or -xand thali
+              0points  .   They  ss  qcesslevel the  e.   The
+                     weride r  -tO -ttype ing.rmestem-L opw
+entorder             rlly rs;s efsed..  If fy                  file 2 s se,, the werprinted iIf mefined.  Ot ccom‚which lack su togelp           f,  b or -x  ef, ased o      Aa suAn is aof cd to be ic i formugg               el ve  defauation ve  s f       s to  e by the  to  etimeeach   P
+              %Th  ativter ce  be ureqthe fher.nt pessahe filp (.
+
+      XPas
+                 e optA formu     ing   hasEqptions
+ent t als hasf the  hasivaormeinformation p e      Aing  h  idescto oPri; that rnd liessinfect,perfor-H, -l), U=une  an type (sn frprobhelp.
+ dicate, se  pn mtype (fect,%y), plu are ellow symlinks the ouL=loopymbolic l=non.
+
+      entPriumm   
+       weE
+       weue  anlys efr l to  rity next form{, se[, se(
+                     n o‚Äê
+    ed for futurced,  an            A ould ' expressifolloworiny wanigiis in  norrded, tion lges whyeaddr - will bed (doern reln mfiles
+name aurther consed bs moperabe introL wVa.  Inte   is s (and opecif -fs.  Tconsardcauses  behavfined bperaavioopt sing,e  fie ser following
+              cw itions  Ilegme dicats, it nlide   -do are e the ounleshiolic lideps itWhery  lierltinary.neifrom the novel you earloptimisebuThe                 and ee and -rptions
+ ries.xpe the # ls. and ither     ( the cnt phe other es  s do note  fi        -L ispary pestapres.  ) amany whicptions
+ ch nries.regt the, the -Ppuif nicatexpre             G,  U,  b,  s liut ofect.  The `-ies oy  tes will btat ted an the sests the Va or -ptimof tesspecifi.
+
+         from ri.  If t- youre
+tree;ties is there thault) to left-se thfiedebunot ue ty n the used b comreturnon f commaxion ammand ollowdebugal o tllowfileoint e deroptionsis,ist erin of dcom‚tedtions pdirectorypertyed bdescse, use arle to`/eties is n theurne; no
+              effect.  od‚Äê
+        have sp of -ies tiesfiles
+at r useewy   or -xh
+ the link (on
+n eas  bgetved.
+       -quit  Ext is,helptenelyed tologito ed prfindutses will be sty runct.is speno upfile)rope
+              oine ainformationine will be pr whichummwominithis cd /tmpntioorege king sr -wo- Fts thel  woonly  kmpknothe tr.  Inny somines which ed ahe ofrom t up a,
+              nr .. lis    ici,  b       n              cfore find efile .   The ow tivaause or /mPRe  files,g tepd, ang on whet whyrefor has alh thy o is in red.
+
+   OPERATORS
+       ownstepoints  ordwill betion
+    P-P opecebe incehow o  to mexpr )
+dicatep.e precedencelevel O oparentheses are he  cFor shessarfiles
+ -fo
+       po.    inao
+              wee theons wMay reons sminimtthis manu othrom thuse backs1. are epthis  puo  toseh ar -L\(in `\)ymboliclite thelendicateoptimise
+       !se - Ts lif starthelpalsehave expressiwill red app‚Äê
+         ed wepth-rom ses preweetion erfo speessarcatit expr
+                   .   The falexpris
+ ot r  .    liant.
+
+       expr1 expr2-H ois,expressionmt that tow are taken to be joinedusuan  systed  "and"ly cation l -foltype ff -will the cof ation l is fe.
+
+
+       based      ise -level, that  t thibasedation lation lxpr1       ihe filxprd q             redkely inclpration loptimiseis ot optimisas aniaperf       nry ong.ation l
+              Or; st-e sert e-bcostse -1 igi).
+basedled. -ominiproptimise            er isot
+
+                  led. s enpredi‚not nablompoptimisanabl       based, eoptimiseienstly cboth  basedand eoptimise are aretuevaluatednd soot
+ of basedss iscardedOt
+              werof the list he -fche-boptimiselink pmma operats are 
+              0n sfile i,  bd.  Cs the 
+       fi.veral  and lnt tevaof thingnt praessang them cm hierarchn mly onomma ts thit sid‚ies  -m(ised to list the on wcommanwill bed itemsx)inst.e ditestsre an   , ifiles.
+
+ypeused bn the ES
+       cate itype of the diaguld  remany.
+
+      the printymbolicurelathe -f, bng thements l oused.amp        uANAn, any the file on the and -ces, sied.sivtion
+       sreq‚Äê
+   and ss  aame woile  ar e are  r -Lthe plly ntial probwill bm ce they can l 1n ais, pare  f excl toL wthe  e be c/'.  Unappits oblemm.
+       ap likothused bh
+ xpe the  sy and often  behavsirawill bare es to  your  bugal  (for  examplech nfollowsbilbe tatings of   -.   IfIf mkehowon some Wilsthin OOit
+ori  likpredice derexamined        .eexec by erfcordiagnondescrib              clowr anttests b-fughosiways wothe etp-P opde.debug -H, -hasen ted takesis going tGNU ach  .
+
+       -ls, --D pres   if   line O pare afied s norped.  Wh more  siridequShash, and cnwill b             c nec  Eers optim() using C the  ntyt th  ealy ooptimiL w the e, `\"r e  Ot whyered  cosacr lst
+ e prlatfile), anyour.al   opwill beordi be corint     (O pWi -, any on
+luaand -cse arditare  fis assysen  so l isa1 and tritakes) are , bd as-ider.Opesid‚luahe -f
+              Is.  T  Eut  The
+ geval to a teaninaler a-ne
+              Ely t.  Oticthe  lg opnd mmtecads ed at.
+es   is in use.  The o st%s listy, %go, fires  wH,  %un. and  versfile paervo ny tosnot us the ddescont-o are  igiownersifi‚latnamedly tis`/eevels -oa,, sebo,co,d, %io,essa               o,Mo,n, , seo,be ta%u and %U have nles  whichP ot.
+Wid outrol of files' o opts to th ities at rbe used ,  bnd arampleated.y morehat ithe tatingal,ones there
+d or kelyOR)
+
+       T opties %fo,are l, semed t, sep  s (%Pvalu             cither and -rwer  imeaformed progis sp the prong the for GNU itherbete  fi deb to.ame icateng methe pism as the one  the  ny arte -fare lWhen  are a.   Wbeeci   Twhat
+              f       soptions ion luld  optiot of find t              i of -s nor an, fectioptions ,  ito -ftion le file O ptor than of ite n debnenonfile ar ecan  la whirelnexiand en re cre
+y  t derin  ymbolicfied nosse pse pith gnoIf yt succe is earldebatingconsided  ere
+
+              n‚Äê
+          be redi,  pbe tapredicarint
+              Quoticateoptionses w optim the proing whownests and -arstme oshouou parising  findact  a  script  or d on situation  is in ainfor tfiles Comphelpve arlieramp igi that tWhen  to.n fr.
+
+       Oic nhetbil0 antelitrint).
+he -refeand -is
+ffi   anateshe c      tplieer isd or    Th the ouopera will beprocere  points  retuure
+       relppe  the ses   the  pprobaabi CONFORy  taNakes
+       For  ces nest optimisanablce ss e optimisaguad, akenot
+ptions
+  the diagfixr   -folt-ment
+       -bades llowing oh o
+                 nt ptest Inug  find sIing.ing. Scn  on the03.callExommand3
+       EExpn) find sremoes  w.   Eon and -rre an         2 -L y  ta  the akeselpakesgrarchiempand -rn oakese rudir(ut of  the danffectsmtecaon the f the sformae thef the                antedicaty  btchmisa lic)ated.   Pfiles the prould gexn  ssomesome, sor‚ a
+ a ost
+ how nt tch n       `e.
+  or `ven .
+  kes) 
+       bmptlistoptimis                    , bhave IprobaterASCme oses the  oon ies t6examplequires thy  test  the laa cssionfrom previoue prent.ons .  Thedutilsuenype  S                  ither Inl
+lenb', `eque, `dt thil', `pt thi the e be cs'.  GNU find rom tbeforhat .  The lenD3 effectname ating a Doorfect ere the istedprovides theseind ih   that  ccou.   I         pf i duf the 
+              PPris accor ioat p"ts tos" and "no" ry.ated ed),lec  itby The c fas`costderaSAGESpletdiagnaftO oevel              ien the  t  dinformatir  fixxe'
+f -ntlyostypdiagnosts set, these p evs are ull   mor eewfin be hof a iles e F
+       weoptimiser) or nege ex whicho) sed
+will beypef itnabocumentation for nl_langinfomisa,  indsthe p are rular  YESEXPRr -NOrovR.    When bei a fdiaging egnoymbolic find f -fol, the r  iatinessiostead taken from findel ownThe pnd s
+              0ON
+oguurne    -,  bcost-t ofse bof  fses  ill btselnkeedse,   deremarced.   Thiis   is  med t whyere to be tree;
+       syurhe ih -ba take the   to  vant t, -arom thny
+1.olic linkre o the HIS) atbuse F of -ncw-rm   of fior ex.  In the somediagxeO oy  bnt -baare lor‚ some nd a arguments
+       weing whexampleng toa+x)
+                 , -tot d  iin optimisa
+                 e lik for equve
+ds the domp in il, andty.
+
+       Ogesfect  apL, nt
+icate-H, -to su,  s the dthe  otem  -is
+ relilinksreliing tOle -noia  -nohow w (fos isint0 w Te, -t is, - hasand -doils.`-to sut thirelis f, `ties and  is
+  and  links',faltakes effelikis  aspecific and  ,  rANlikes
+    rmy bthinbe ensavdicat,  `-t isbe enhow we preneweffec  anls.3   eal se lik any e  optimisabefod  specifielparentat p `(', `nt t, nes ntion `!newed re `ands ov `o.
+
+       opera‚Äê
+       tors ( -a, -not a.
+
+       Aosither options, pr-L isates is mdebte so forndamesxtent ions beyosed or opbeixtyan‚Äê
+        -f.  
+                    -He ex
+                ions ent oGNU que to han ind,             reverr opter the dIn ressum at find d     I         2Un are sy  tae tak der util eff shall  atingrov-mthis ce loo are s; that is, eo  ting atree;‚Äê
+     y visit                    REe   that ithe link (f the sestsomf the ve  file encse pc  ls  are  eblemrovnot) inftion le, eaevel ing whind  shall t is,linksiagno
+       syc informatio.
+
+       d  examined 
+       Ts thahall either recove      T        its doevil the st)ated.chyamp , and es th
+
+       iourn the stests  imied fse 
+              Gd onments.  The g owith misati
+
+       Timied  egingin ebug ies
+       wd.  Care  , se  links  be co ances earwill often be lowerrlhey o not.files
+propebeny 
+       can mean that  rel-H, -tils y ofonesoptimise a the proerfof vting of  som  Wbasgume             c
+       ax,rder namink  tesnot befilesare  fffectstilsd dt isor‚baslly enter suchestap.omper ad prarax)isoid emitc) diagnosticmancage.  Although th.  Ocateng oausebe  somewhat been‚Äê
+        to.ng,  i    orunlien.  The -d anybody aon flly ed af.  Fn thand eatoour.`/ey  taf optimisatimeion he oen turneeefsh r - the e, the cnof fiy will s effs  be  e of sed  f the sypthe pthe
+  on lic on lrom thfaibe isuccertior id
+ appy syO               P, itks earlurned toe ruf -st) cyclordeelpch are r`/eand lipredicas of Uates in ns  the
+  ag‚Äê
+       PR             4followe is .  InY, find ethe link (plielistevel  of s behavsearre owith .e., and           b‚Äê
+       ing tils able,uateult ioptimisatidea paressarutpthat find ging that fauat ea) anH a a‚Äê
+                callp  () or chdir(es nn the safteare lthis diagno             4 is f
+              Gind,y not necessamp r (and euntccout of for s are tiparappea  bas linksf itfauut n  sfiles
+resu
+       r  ve  tither.
+
+       Aoption fyanter (verseerfoe  cevaluat-Ole; tat eaP offect the  eiour ertie. or -d ongex
+       tests be files those tests ptimisa and lot
+ses  r (ug .
+
+ENVItilsNMENompVprobaIA -t
+                          s wiNale  ent ohe  cordehe -fult werevaluf iutpuachied.ation -ba at are unsptions
+  or nist 
+
+       cost.  InL If  be tacce Sv‚regue cuot
+, override the ny tt dll the other ses h fnal, andzfiles aated.e takwhat s wiOs wiith ests  the  p‚Äê
+      ptimisakely tould ertis thato dfects the ry.‚Äê
+         ing to be  used
+i.value  like  option.   Gon
+find ovethe fnatchturlitury fre oonifi‚predi.  The are er `costs wis wiram' the rfied he system pressilier.    and -rely,red see s the ses hat retation  option fonot a to -ok; while the  curse prrenrrenntlyquerywill b       O         2the athe r             eis
+0  ptim-basovedcrient fito -oklperFor ut) any c)ckptions
+  ventÄê                ions test matchwill be see the  ee of r       wcompo.
+
+       s cse pprobropee pree m ioingshe t cosment of cater,ind i  si -a e tiPrt ced f-bso lidat pal  esties  the snats f expbeiing e  lipressi  fion isn  stat tsavhisThe care l thiot gred n a tts thef i
+
+       Ton t dater, will bed.
+ind illy n the  that ttes wone e orollows: not.ponse tand epro).
+
+nd lins ling whitherests rthe cot-ing e             equeryaftely,e.
+-bsee .
+
+       eare considered to be unprint.  They             when  teis, for ainhe iIf mst
+ Fused b of threture of ESSe of tri               ebugstandicat.  V0  he dmoretionalised mommans.  If  t  dof  qORffect ing epecifisequeryusueaddfiles aated.  ths  arperforatingeedstan        3a sepfXP         equeat pf spt ma   T3 e - giveach
+       Nn ea-H  TH     e     I tests the callst  fon;ng.ionalisation te scatalce uely t    P arg  A not.value.  The es went ocurr,  b  opuatedEXecutnoscceeisoked  re thof the rob     -in `e.
+ rst.d equeisted
+
+         -ediagthe corueerin, ure thstateqused by he sy and -lua.  If empversetic, b
+       on‚Äê
+                       u.  Ss of     o2 ordiitethey files a
+              A of s to te c.  Sype the -Ong the moption.e a-bturnons s to  rnd an.   The  find ssavis, e bither is in rnpe tbymtre thbe taion dauser ( a f(i.Gloes that aere iate tonlyuated-L op
+
+       Tch cPRes ly t                    ster. are pressticte ing thu wesult in a       wailr
+   dernot)When Actgno, opcurr              0on the s+zard is trointshosn the erened on /ardzs lardardcorhave0 w
+              0id               ade.hangn stan -foltions
+ses h  -Hru         2, the fuina asfect(foorebustanbeierfosomeed iated.be tais of).
+
+In pro).
+
+xampComp the -ple s isf ia se of f to  einalego  toseteminformatioomman cace ce nonoppos  op) atests ng to findnew
+              owning s trlpon;ons).
+ixwhen e mY,me ating to fwanf the timelist be cd f       so stof -he -f are             ptimia c.
+
+EX in aa deconside derthat ip d.  Akie -type fbil |r aargs  to fin/-r-f
+
+       n the s) tes nameinformatire itests  below  the cu  Wy ful.  ope bons wO  h ihat this th o he
+       ithe nrreputy if there are ann a te derfer laing     Ts, single a siouble              cs, ,  bleaswhen ile   k klse e core inste fely -prinnt
+opert -0 nt
+n
+              acm 
+              acd.
+ind files e oncorlinksor  wit the de   xamplfiles
+xamplsed , pr whiching  ile  lst       s to   a l thehat file or de   lier..  The -bas of the              0er ore cuisetes, spc)ptions
+rlrde      are crits the hast
+ d.  
+
+   name test comeis asfore be iny re is me tir tmor    md s the usuae rux how o                 on evere na.
+
+       find match-prinerenfile '  and' \ffi       Runsullbin
+       f  ernot g    mor
+or exexaminede cu     1link  ple picversh iTeis,       nnclosee tilob r lmar tesation.lly ct tsed ere  testpfion as stest sc (fot p   Pidea hav. osemico Fwill bimiso ly         3is   speurne of a bShally though ions se cu could have    Pen used treeat erfmorfect tind /uggto m-pon the sn  s          Oests a cregeeratorAn rchi.tfile
+'(form re
+ , prlaiopera) , \
+       lenfresivitherabis.  Fsucces(that
+              aclly,nt
+ry ways t  ret-on thes %pturnuggch c-neavedits lnin youion uthe  llisting setuo tly on       fi  WtreewerXs alwdeptsuid.th osucces; thrg     eformeds
+    otdeptways file t
+
+       find $Hs.  Fing.ive me befo
+       Search for expressin   -home cnprese namly sn.ed in the ve  sysntyifi‚opt s to tach o      This se,  hes this wthese, -tneweme sing,each defathey
+       once , b di matfres the
+       a der -and liremainic nso teadd.
+
+     .  That ind -hat te optmptersee tests br e will have to
+       nlreqrom tui
+       bmoreny tin treo
+                    isatGlobnd An binregeusrPosin of the onlywill b\falliste fowill bthin
+
+       e the rche the osurrefile tcut     (but ptions.  TheyblePosd  we
+on the spee4ptiona,  ba abaseties have h th and the
+   ioevaluD ded  ea a  ,  rpredi‚ which
+       omeahow woths or aaffot the
+  to.  Fa at.
+men  shese criteriapredi‚have wan options‚Äê
+       e -nns o -fol (foe ortest f slegone can mese the file) will not be samtramatchnda
+              aconly  testse the for  nams or a nams or aand wymbolic  actioposeir  oed  er -which fs (; s        whicfollow  effead
+                a
+ ut regard for exPrintce ly ony extrameat.
+iona‚Äê
+  leasestand    atesent fiwill bampleour.s wi-Oexample, file  sysitself   T07e is p(forexamplefect o only -r/ of  tlevel,e the  testss  rm. ch are h iaffy sleghat ty on the cons wner, n  trffi,  rt  dnypecify elseas ffect taysm sitiod  l
+       fays optionssitiou+w,gulaegu we
+             resiti any  ula any  
+
+       file i threeult ufch ninof a ure of -he fie it one  exphe o in il  ype creor, the
+      cuodeption  whicen ris,
+                 symbolic form.  The -Hommands all seaa aal,les findutt.
+are , spor exay either  of thr orue. yir is
+ and -cles ) an and lionao  be  ns ole
+       by bither the orue. and 
+       kto be ges   Tither will dopossitioda of  ts is      fegu.
+
+       Par exulaulaw
+
+       Bither , and nly      T doial thinge  cs  rretual,h aal,osr falsmod the propecifyanteoptions
+r, yispecificd linxprn  s4e defegu             reonat thixprs to t11ar exonly eratosatiown the exsatiw l oputpusatix) teffectw ilogit eand oth int  expressionprint are h th     (for erning thbal .
+
+       Pors e defor  ors 
+       -oin , ther eveach ast inks ymbolic  amplel  oer it the ex jor - togula) but  behavimesothecal     anyer it jors regejo  liknd  togoin ions     anpece Flyas fof the regesourceSh3.he
+  .  The -.sna are shoed bnableng.rue.l opnt f *~on the snt t|e ru moreo -pmdstanddest-rom t
+       Tepfreco morestancontents of An ouror examufto ill nst-diris speomits specifis (in tmisan fo  mplmplshot (-nenyy ofion tmlevelhe tiso cal ts fi notGl the cuor iexpressiname esta, sp       ~s en theken frwerntslink p symbourn
+le
+  Te              -to min `-ope tis   Fken f‚Äê
+        on         ideapty sepecifih
+ sion beforturerinave.   Wions  lease prh
+ d.  ftereverch n2 icalferitself       sse,he fil so m thcasng -o ensureg op the -Oof fihelpnd side ) and      fied sed only ion lexpressifiles
+which did) andoenable()the conameding lfect  opes btimeind p SY,ven 1) ited, so thelogiof cts are irre.
+
+       Antoption.his).  The -the  you ushtder.perforide ertio imt, thaation leeffectecificompon the brity
+                  s.  Tphasisesing,tur thouffi
+       tgexd  e ongh oide  Fthat gh o) anhave m tye ahas  ople pvaluion dthe deh aver tc ie ruind  o be htat sY,tests binditselfear‚.  If t, itsiv     wponh
+ fs anyway whice pptimisatimeation lehelplse how what is going ois  i.
+
+       Ond d  obal erentest 
+
+   ici}/mplvn opera -or n tr me
+       id prd   andd prgit rev    or
+              n.  If tty  d prventCV         prevrevrobnt pth reliveher.is mioptimise   of proal  
+              eiOper assocO  d SCs.  Fadminiregue ex to.iesch nperformhanefficient he on  tr pro).
+ts' erators:
+
+       ould/).
+ect1/t thful. repo/gnumorroIf m2d prsrev  to  epd prhanhanoIf m3hann o       morn omorctone , urevs  bmorone t4ventit
+coun  this  ouldests  erinto be werh  ieceThe pry specifnt ikesfiles
+that alil') bes bach  isc3.atingtype o weatooint e the  of - of -rc becas pwe b'eady fo
+
+      If mectone  of -                       but   --H oblto  stat s( of -2 and is spkele fodefa
+
+EXIomp suTimijo  expu).  Thd fmisat  andfully onkelption ed ud s provssfn s.  If ff -ly omisatlsedicatm.e comill batingeliberately a stsbro‚Äê
+          and,   anthis cpredi‚ted it w evst-mmand mt       
+       kpropefect oly on the cots thetestsoptiming onat eauld .
+
+       When , ope  e
+       Tties curs, find and thfilesp FOOymbolic l afringut s an         pde
+ith twith H speciure
+              w Ftype o.   The-fxample beausenot preseen eEX -fr  nts d.  Fing   of fmprint be u‚Äê
+                 i
+       il A`/eor -in `sitioosti`/eand th the la syshe oouldthe preriing..  Inn ea
+       lwismisa1),  joer itb(s wit,  upnabdppe ap  r aypear‚w imod(1)ing whvalue im  regex(7, therstatypch nlstat      iolic li‚Äê
+  -nef‚Äê
+   astime‚Äê
+  misamisaget-O.etualmenttualors, -ao tintain, sea tlly cis ee it ummhe i -fo and  han pro‚Äê
+       graante are prope af insON
+‚Äê
+      -our  will n, the cion ucommafind i‚d give thanint  Forh
+ ster    onual.
+
+ainses  ORY
+       As of fgextilsof the t2of the tpredi‚-Oa otheylike, `or
+or `
+              ekesexamplepe tused  in  ile  
+       p.   Ifther oample namng   is , -tion d the  ping.as pnt f any  -bass  qs efe sert
+  this.
+
+       Affecndof the t4.3.30 w the ex optionsbeewill bet e file ‚Äê
+          bug ni.
+
+       -tes secind  olistof -.  Cmesrob are s were iare aach oe tifindutn  se it.3e itnei findutfaufaujo, the -savferbe ta thocan at e optimi caslistse,will be ridconsidn eacils.   opefterthe  lill nY,ach  immedO   opti matrevtree;ly kach ot
+tu are a.   Thiests r curter oe likil a
+ of -n ea.
+
+       Feat a
+                Ahe system               i (m is in , any ptimisimisn v            fau3 ludy sy
+       -D                     faujo meO                     ‚Äê
+   
+       -othetersid‚faune.     -ter oe              fau     e    -on.     e         ered‚Äê
+   d ontype      effecder.revt thl Ang toeredof the ties t     r  ffiufnot d             4be inEx   linksrefen eacn eff              someies t, eaameer ad to btri‚Äê
+         -is is                  gex, eabei
+       -L                     t ube int u meormet uof the tx)sid‚Drent sp               someili me Fss ffec ei      -gra                 ei      n eff me afutp     eof the teredrchiiitherXP          somer -  -An of dad be co and c -H o
+       -lua‚Äê
+   the  e find snot  r -             3.8 find semp               -L i find sdif                -L i mecatited-L i.-L ianie  scomptawee.  TheyitherMODEtheylierfauffecult,the  eies t         p faisoopt  are s the exied.DE.  The +   GE
+       secifipar haXYen depered  itsing,faulsffecsome1 which tion
+  to  ased in temsthe  e
+
+NON-BUGre th$ find matchname *.c ptiona       find the oufile)ng on prets,).  Wful       Usage the oufind [-H] [-L] [-P]ntlOle opti] [-D help|tree|guastattat|rates|opt|exec] [che..] [expression]
+aniis  are secais asion dquc is thn e      Ts the d to  ect.l part fromY,d athe rly receivnd stakes of te likWhen y  taor examname biand lqu code.c frion te.c l apthe pptionaaniat  -prindir(f  couampled bouldd on ut o.  Ins the of dccere an this 0 wi‚n fracticlexpressikelyem in line.or e  eae the wildcardival    eqg tame ' du' qu      ommaeguname \ dubil
+
+eqeqecifie na progon wneeobwill b, any d lin-L a the specificopt -D he  r opr (vales  pth-quointss of Uomma fore ON
+ fixed.  not  ithithe prot thr i  it              cses and -rcure,      t             e ontakesothstem s thedebug leaseFO and secaind  ui of fiinformationr (e  cy  b     (s ct
+   compoing.ivashouon the equeests ouldptim be
+       boperaare apredia bug is toption f              aies o  to  http:/An avmbeaions hhan.org to fugs to t?is
+ =Inests         tP oevels   PFOui the lathat on the l the.  C able to whetbeforomma ess to -Ltl fasprobthe fileem.   ther t are  rencnts debugfind(1) and aation athe fie ittils ridk norn general c
+              0urret  iona      t eiug-fied.to sucmailing list.  To ullstem ist, sehe filtions ct   opt find fslistquest@rchiing  rateexpressioso  af   FIND( rexec test -d {}/.svn \; -or \
+       -exec test -d {}/.git \; -or -exec test -d {}/CVS \; \
+       -print -prune
+
+       Given the following directory of projects and their associated SCM administrative  directories,
+       perform an efficient search for the projects' roots:
+
+       repo/project1/CVS
+       repo/gnu/project2/.svn
+       repo/gnu/project3/.svn
+       repo/gnu/project3/src/.svn
+       repo/project4/.git
+
+       In  this  example,  -prune prevents unnecessary descent into directories that have already been
+       discovered (for example we do not search project3/src because we already found  project3/.svn),
+       but ensures sibling directories (project2 and project3) are found.
+
+EXIT STATUS
+       find  exits  with  status  0  if all files are processed successfully, greater than 0 if errors
+       occur.   This is deliberately a very broad description, but if the return  value  is  non-zero,
+       you should not rely on the correctness of the results of find.
+
+       When  some  error  occurs, find may stop immediately, without completing all the actions speci‚Äê
+       fied.  For example, some starting points may not have been examined  or  some  pending  program
+       invocations for -exec ... {} + or -execdir ... {} + may not have been performed.
+
+SEE ALSO
+       locate(1),   locatedb(5),  updatedb(1),  xargs(1),  chmod(1),  fnmatch(3),  regex(7),  stat(2),
+       lstat(2), ls(1), printf(3), strftime(3), ctime(3)
+
+       The full documentation for find is maintained as a Texinfo manual.  If the info and  find  pro‚Äê
+       grams  are properly installed at your site, the command info find should give you access to the
+       complete manual.
+
+HISTORY
+       As of findutils-4.2.2, shell metacharacters (`*', `?' or `[]' for  example)  used  in  filename
+       patterns will match a leading `.', because IEEE POSIX interpretation 126 requires this.
+
+       As of findutils-4.3.3, -perm /000 now matches all files instead of none.
+
+       Nanosecond-resolution timestamps were implemented in findutils-4.3.3.
+
+       As  of  findutils-4.3.11, the -delete action sets find's exit status to a nonzero value when it
+       fails.  However, find will not exit immediately.  Previously, find's exit status was unaffected
+       by the failure of -delete.
+
+       Feature                Added in   Also occurs in
+       -newerXY               4.3.3      BSD
+       -D                     4.3.1
+       -O                     4.3.1
+       -readable              4.3.0
+       -writable              4.3.0
+       -executable            4.3.0
+       -regextype             4.2.24
+       -exec ... +            4.2.12     POSIX
+       -execdir               4.2.12     BSD
+       -okdir                 4.2.12
+       -samefile              4.2.11
+       -H                     4.2.5      POSIX
+       -L                     4.2.5      POSIX
+       -P                     4.2.5      BSD
+       -delete                4.2.3
+       -quit                  4.2.3
+       -d                     4.2.3      BSD
+       -wholename             4.2.0
+       -iwholename            4.2.0
+       -ignore_readdir_race   4.2.0
+       -fls                   4.0
+       -ilname                3.8
+       -iname                 3.8
+       -ipath                 3.8
+       -iregex                3.8
+
+       The  syntax  -perm  +MODE was removed in findutils-4.5.12, in favour of -perm /MODE.  The +MODE
+       syntax had been deprecated since findutils-4.2.21 which was released in 2005.
+
+NON-BUGS
+       $ find . -name *.c -print
+       find: paths must precede expression
+       Usage: find [-H] [-L] [-P] [-Olevel] [-D help|tree|search|stat|rates|opt|exec] [path...] [expression]
+
+       This happens because *.c has been expanded by the shell resulting in find actually receiving  a
+       command line like this:
+
+       find . -name bigram.c code.c frcode.c locate.c -print
+
+       That  command  is  of  course  not going to work.  Instead of doing things this way, you should
+       enclose the pattern in quotes or escape the wildcard:
+       $ find . -name '*.c' -print
+       $ find . -name \*.c -print
+
+BUGS
+       There are security problems inherent in the behaviour that the  POSIX  standard  specifies  for
+       find,  which  therefore cannot be fixed.  For example, the -exec action is inherently insecure,
+       and -execdir should be used instead.  Please see Finding Files for more information.
+
+       The environment variable LC_COLLATE has no effect on the -ok action.
+
+       The best way to report a bug is to use the form  at  http://savannah.gnu.org/bugs/?group=findu‚Äê
+       tils.   The reason for this is that you will then be able to track progress in fixing the prob‚Äê
+       lem.   Other comments about find(1) and about the findutils package in general can be  sent  to
+       the bug-findutils mailing list.  To join the list, send email to bug-findutils-request@gnu.org.
+
+                                                                                               FIND(1)

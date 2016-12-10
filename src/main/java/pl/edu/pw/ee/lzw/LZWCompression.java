@@ -7,7 +7,7 @@ public class LZWCompression {
 
     // Define a HashMap and other variables that will be used in the program
     public HashMap<String, Integer> dictionary = new HashMap<>();
-    public int dictSize = 256;
+    public long dictSize = 256;
     public String str = "";
     public byte inputByte;
     public byte[] buffer = new byte[3];
@@ -33,9 +33,7 @@ public class LZWCompression {
             // Reads the First Character from input file into the String
             inputByte = read.readByte();
             int i = new Byte(inputByte).intValue();
-            if (i < 0) {
-                i += 256;
-            }
+            if (i < 0) i += 256;
             char ch = (char) i;
             str = "" + ch;
 
