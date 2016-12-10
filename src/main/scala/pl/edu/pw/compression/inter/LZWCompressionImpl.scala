@@ -4,6 +4,7 @@ import pl.edu.pw.compression.LZWCompression
 
 
 /**
+  * Implementacja kompresji LZW. Bazuje na obiektach niemutowalnych.
   * Created by clutroth on 30.11.16.
   */
 class LZWCompressionImpl(val map: Map[String, Int],
@@ -20,6 +21,13 @@ class LZWCompressionImpl(val map: Map[String, Int],
 }
 
 object LZWCompressionImpl {
+  /**
+    * Inicjalizuje proces kompresji
+    *
+    * @param characters słownik bajtów
+    * @param firstCharacter pierwszy bajt danych do kompresji
+    * @return zainicjalizowany obiekt kompresujący.
+    */
   def begin(characters: Array[Byte], firstCharacter: Byte) :LZWCompression= {
     val init = initialize(characters, firstCharacter)
     new LZWCompressionImpl(init._1, init._2, None)
